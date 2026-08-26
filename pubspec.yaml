@@ -1,0 +1,48 @@
+name: imclipboard
+description: Read and write PNG images through the system clipboard on Flutter's desktop, mobile, and web platforms.
+version: 0.1.0
+homepage: https://github.com/focale-editor/imclipboard
+repository: https://github.com/focale-editor/imclipboard
+
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: app.focaleeditor.imclipboard
+        pluginClass: ImclipboardPlugin
+      ios:
+        pluginClass: ImclipboardPlugin
+        sharedDarwinSource: true
+      linux:
+        pluginClass: ImclipboardPlugin
+      macos:
+        pluginClass: ImclipboardPlugin
+        sharedDarwinSource: true
+      web:
+        pluginClass: ImClipboardWeb
+        fileName: src/imclipboard_web.dart
+      windows:
+        pluginClass: ImclipboardPluginCApi
+
+release:
+  changelog:
+    header: '# 📰 Imclipboard changelog'
+    defaultIgnoredTypes: ['test']
+    defaultIgnoredScopes: ['repo', 'docs', 'version', 'deps', 'tools']

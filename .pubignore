@@ -1,0 +1,14 @@
+.agents/
+.codex/
+.dart_tool/
+.env
+.flutter-plugins-dependencies
+.idea/
+build/
+coverage/
+test/
+doc/
+docs/
+AGENTS.md
+analysis_options.yaml
+*.iml

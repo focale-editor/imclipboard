@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:imclipboard/imclipboard.dart';
 
@@ -98,6 +98,7 @@ class _ClipboardExamplePageState extends State<ClipboardExamplePage> {
         _status = switch (read.value) {
           final ClipboardImage image =>
             'Read ${image.info.width} × ${image.info.height} PNG (${image.pngBytes.length} bytes).',
+          null when read.supported && kIsWeb => 'The browser exposed no PNG image. Copy the image pixels rather than its file reference.',
           null when read.supported =>
             'The clipboard contains no compatible image.',
           null => 'Image clipboard unsupported.',

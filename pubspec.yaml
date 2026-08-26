@@ -1,5 +1,5 @@
 name: imclipboard
-description: Read and write PNG images through the system clipboard on Flutter's desktop, mobile, and web platforms.
+description: Read and write raster images through the system clipboard on Flutter's desktop, mobile, and web platforms.
 version: 0.1.0
 homepage: https://github.com/focale-editor/imclipboard
 repository: https://github.com/focale-editor/imclipboard
@@ -13,6 +13,7 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
+  imcodec: ^0.1.5
   plugin_platform_interface: ^2.1.8
   web: ^1.1.1
 
@@ -37,7 +38,7 @@ flutter:
         sharedDarwinSource: true
       web:
         pluginClass: ImClipboardWeb
-        fileName: src/imclipboard_web.dart
+        fileName: src/web.dart
       windows:
         pluginClass: ImclipboardPluginCApi
 

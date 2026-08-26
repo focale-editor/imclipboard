@@ -40,13 +40,16 @@ final class ClipboardImage {
   final ClipboardImageInfo info;
 
   /// PNG-encoded image bytes.
+  ///
+  /// The buffer is a defensive copy owned by this result. Treat it as
+  /// read-only so subsequent consumers receive the original clipboard image.
   final Uint8List pngBytes;
 
   /// Creates a clipboard image.
   ClipboardImage({
     required this.info,
     required Uint8List pngBytes,
-  }) : pngBytes = pngBytes.asUnmodifiableView();
+  }) : pngBytes = Uint8List.fromList(pngBytes);
 }
 
 /// The result of inspecting a platform clipboard.
@@ -146,20 +149,27 @@ abstract class ImClipboardPlatform extends PlatformInterface {
     String? token,
   }) => throw UnimplementedError('writeImage() has not been implemented.');
 
-  /// Validates arguments shared by channel and web implementations.
-  @protected
-  void validateWriteArguments(Uint8List pngBytes, String? token) {
-    if (pngBytes.isEmpty || pngBytes.length > maxEncodedBytes) {
+  /// Validates bounded encoded image bytes and optional application metadata.
+  static void validateImageArguments(
+    Uint8List imageBytes,
+    String? token, {
+    required String operation,
+  }) {
+    if (imageBytes.isEmpty || imageBytes.length > maxEncodedBytes) {
       throw ImClipboardException(
-        operation: 'writeImage',
-        cause: ArgumentError.value(pngBytes.length, 'pngBytes.length', 'must be between 1 and $maxEncodedBytes'),
+        operation: operation,
+        cause: ArgumentError.value(imageBytes.length, 'imageBytes.length', 'must be between 1 and $maxEncodedBytes'),
       );
     }
     if (token != null && (token.isEmpty || token.contains('\u0000') || utf8.encode(token).length > maxTokenBytes)) {
       throw ImClipboardException(
-        operation: 'writeImage',
+        operation: operation,
         cause: ArgumentError.value(token, 'token', 'must be non-empty, contain no NUL, and use at most $maxTokenBytes UTF-8 bytes'),
       );
     }
   }
+
+  /// Validates arguments shared by channel and web implementations.
+  @protected
+  void validateWriteArguments(Uint8List pngBytes, String? token) => validateImageArguments(pngBytes, token, operation: 'writeImage');
 }

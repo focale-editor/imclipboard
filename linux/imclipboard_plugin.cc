@@ -62,6 +62,30 @@ FlValue* ImageResult(GdkPixbuf* pixbuf,
   return result;
 }
 
+// Resolves one local regular-file URI to filesystem and UTF-8 paths.
+gboolean LocalFileFromUri(const gchar* uri,
+                          gchar** filename_out,
+                          gchar** utf8_filename_out) {
+  g_autofree gchar* hostname = nullptr;
+  g_autofree gchar* filename = g_filename_from_uri(uri, &hostname, nullptr);
+  const gboolean local_host =
+      hostname == nullptr || hostname[0] == '\0' ||
+      g_ascii_strcasecmp(hostname, "localhost") == 0;
+  g_autofree gchar* utf8_filename =
+      filename == nullptr
+          ? nullptr
+          : g_filename_to_utf8(filename, -1, nullptr, nullptr, nullptr);
+  if (filename == nullptr || utf8_filename == nullptr || !local_host ||
+      !g_path_is_absolute(filename) ||
+      std::strlen(utf8_filename) > kMaximumFilePathBytes ||
+      !g_file_test(filename, G_FILE_TEST_IS_REGULAR)) {
+    return FALSE;
+  }
+  *filename_out = g_steal_pointer(&filename);
+  *utf8_filename_out = g_steal_pointer(&utf8_filename);
+  return TRUE;
+}
+
 FlValue* ReadLocalFiles(GtkClipboard* clipboard) {
   FlValue* result = fl_value_new_list();
   g_auto(GStrv) uris = gtk_clipboard_wait_for_uris(clipboard);
@@ -72,25 +96,41 @@ FlValue* ReadLocalFiles(GtkClipboard* clipboard) {
   for (gsize index = 0;
        uris[index] != nullptr && fl_value_get_length(result) < kMaximumFileCount;
        ++index) {
-    g_autofree gchar* hostname = nullptr;
-    g_autofree gchar* filename =
-        g_filename_from_uri(uris[index], &hostname, nullptr);
-    const gboolean local_host =
-        hostname == nullptr || hostname[0] == '\0' ||
-        g_ascii_strcasecmp(hostname, "localhost") == 0;
-    g_autofree gchar* utf8_filename =
-        filename == nullptr
-            ? nullptr
-            : g_filename_to_utf8(filename, -1, nullptr, nullptr, nullptr);
-    if (filename == nullptr || utf8_filename == nullptr || !local_host ||
-        !g_path_is_absolute(filename) ||
-        std::strlen(utf8_filename) > kMaximumFilePathBytes ||
-        !g_file_test(filename, G_FILE_TEST_IS_REGULAR)) {
+    g_autofree gchar* filename = nullptr;
+    g_autofree gchar* utf8_filename = nullptr;
+    if (!LocalFileFromUri(uris[index], &filename, &utf8_filename)) {
       continue;
     }
     fl_value_append_take(result, fl_value_new_string(utf8_filename));
   }
   return result;
+}
+
+// Reads an advertised image or loads the first readable copied image file.
+GdkPixbuf* ReadClipboardImage(GtkClipboard* clipboard) {
+  GdkPixbuf* pixbuf = gtk_clipboard_wait_for_image(clipboard);
+  if (pixbuf != nullptr) {
+    return pixbuf;
+  }
+
+  g_auto(GStrv) uris = gtk_clipboard_wait_for_uris(clipboard);
+  if (uris == nullptr) {
+    return nullptr;
+  }
+  for (gsize index = 0;
+       uris[index] != nullptr && index < kMaximumFileCount; ++index) {
+    g_autofree gchar* filename = nullptr;
+    g_autofree gchar* utf8_filename = nullptr;
+    if (!LocalFileFromUri(uris[index], &filename, &utf8_filename)) {
+      continue;
+    }
+    g_autoptr(GError) error = nullptr;
+    pixbuf = gdk_pixbuf_new_from_file(filename, &error);
+    if (pixbuf != nullptr) {
+      return pixbuf;
+    }
+  }
+  return nullptr;
 }
 
 void ProvideClipboardData(GtkClipboard* clipboard,
@@ -164,7 +204,7 @@ void HandleMethodCall(FlMethodCall* call) {
 
   if (std::strcmp(method, "readImageInfo") == 0 ||
       std::strcmp(method, "readImage") == 0) {
-    g_autoptr(GdkPixbuf) pixbuf = gtk_clipboard_wait_for_image(clipboard);
+    g_autoptr(GdkPixbuf) pixbuf = ReadClipboardImage(clipboard);
     if (pixbuf == nullptr) {
       fl_method_call_respond_success(call, nullptr, nullptr);
       return;

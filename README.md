@@ -6,16 +6,14 @@ Clipboard reads and native writes use PNG as a stable cross-platform representat
 
 ## Platform support
 
-| Platform | Read/write images | Copied local file paths    | Notes                                                                                       |
-|----------|-------------------|----------------------------|---------------------------------------------------------------------------------------------|
-| Android  | Yes               | No                         | Images are exchanged through a temporary, read-only content URI.                            |
-| iOS      | Yes               | When supplied as file URLs | Read from an explicit paste action to follow iOS pasteboard privacy behavior.               |
-| Linux    | Yes               | Yes                        | Uses GTK 3 and supports image/file clipboards on the active desktop session.                |
-| macOS    | Yes               | Yes                        | Uses `NSPasteboard`; iOS and macOS share one `darwin` implementation.                       |
+| Platform | Read/write images | Copied local file paths    | Notes                                                                                                                |
+|----------|-------------------|----------------------------|----------------------------------------------------------------------------------------------------------------------|
+| Android  | Yes               | No                         | Images are exchanged through a temporary, read-only content URI.                                                     |
+| iOS      | Yes               | When supplied as file URLs | Read from an explicit paste action to follow iOS pasteboard privacy behavior.                                        |
+| Linux    | Yes               | Yes                        | Uses GTK 3 and supports image/file clipboards on the active desktop session.                                         |
+| macOS    | Yes               | Yes                        | Uses `NSPasteboard`; iOS and macOS share one `darwin` implementation.                                                |
 | Web      | PNG               | No                         | Requires HTTPS or localhost, permission, and a user gesture. Copied file references are not exposed as local images. |
-| Windows  | Yes               | Yes                        | Publishes both PNG and alpha-aware `CF_DIBV5` data.                                         |
-
-`readImageFiles` intentionally returns only existing absolute paths. Android content URIs and browser `File` objects are consumed internally or omitted rather than being misrepresented as local paths.
+| Windows  | Yes               | Yes                        | Publishes both PNG and alpha-aware `CF_DIBV5` data.                                                                  |
 
 ## Usage
 

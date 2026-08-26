@@ -43,7 +43,7 @@ class ImclipboardPlugin :
 
         try {
             when (call.method) {
-                "readImageFiles" -> result.success(emptyList<String>())
+                "readFiles" -> result.success(emptyList<String>())
                 "readImageInfo" -> result.success(readClipboardImage(context, includePng = false)?.toMap())
                 "readImage" -> result.success(readClipboardImage(context, includePng = true)?.toMap())
                 "writeImage" -> {

@@ -141,7 +141,7 @@ abstract class ImClipboardPlatform extends PlatformInterface {
   Future<ClipboardReadResult<ClipboardImage>> readImage() => throw UnimplementedError('readImage() has not been implemented.');
 
   /// Reads absolute local file paths advertised by the system clipboard.
-  Future<ClipboardReadResult<List<String>>> readImageFiles() => throw UnimplementedError('readImageFiles() has not been implemented.');
+  Future<ClipboardReadResult<List<String>>> readFiles() => throw UnimplementedError('readFiles() has not been implemented.');
 
   /// Replaces the current clipboard with a PNG image and optional [token].
   Future<bool> writeImage(

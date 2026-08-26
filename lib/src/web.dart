@@ -88,7 +88,7 @@ final class ImClipboardWeb extends ImClipboardPlatform {
   }
 
   @override
-  Future<ClipboardReadResult<List<String>>> readImageFiles() async => await isSupported() ? const ClipboardReadResult(supported: true, value: []) : const ClipboardReadResult.unsupported();
+  Future<ClipboardReadResult<List<String>>> readFiles() async => await isSupported() ? const ClipboardReadResult(supported: true, value: []) : const ClipboardReadResult.unsupported();
 
   @override
   Future<bool> writeImage(

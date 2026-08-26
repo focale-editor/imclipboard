@@ -74,23 +74,23 @@ final class MethodChannelImClipboard extends ImClipboardPlatform {
   }
 
   @override
-  Future<ClipboardReadResult<List<String>>> readImageFiles() async {
+  Future<ClipboardReadResult<List<String>>> readFiles() async {
     if (!await isSupported()) {
       return const ClipboardReadResult.unsupported();
     }
-    final Object? result = await _invoke('readImageFiles');
+    final Object? result = await _invoke('readFiles');
     if (result == null) {
       return const ClipboardReadResult(supported: true, value: []);
     }
     if (result is! List<Object?> || result.length > ImClipboardPlatform.maxFileCount) {
-      throw ImClipboardException(operation: 'readImageFiles', cause: StateError('The native clipboard returned an invalid file list.'));
+      throw ImClipboardException(operation: 'readFiles', cause: StateError('The native clipboard returned an invalid file list.'));
     }
 
     final List<String> paths = <String>[];
     final Set<String> seen = <String>{};
     for (final Object? value in result) {
       if (value is! String || !_isValidAbsolutePath(value)) {
-        throw ImClipboardException(operation: 'readImageFiles', cause: StateError('The native clipboard returned an invalid local file path.'));
+        throw ImClipboardException(operation: 'readFiles', cause: StateError('The native clipboard returned an invalid local file path.'));
       }
       if (seen.add(value)) {
         paths.add(value);

@@ -30,10 +30,12 @@ final class ImClipboard {
 
   /// Reads existing absolute file paths advertised by the clipboard.
   ///
-  /// Desktop file managers commonly expose copied images as file references.
+  /// Desktop file managers commonly expose copied files by reference. Paths
+  /// are returned regardless of file type so callers can apply their own
+  /// import policy.
   /// Platforms without local path clipboards return an empty list while still
   /// reporting the plugin as supported.
-  Future<ClipboardReadResult<List<String>>> readImageFiles() => ImClipboardPlatform.instance.readImageFiles();
+  Future<ClipboardReadResult<List<String>>> readFiles() => ImClipboardPlatform.instance.readFiles();
 
   /// Replaces the clipboard with [pngBytes].
   ///

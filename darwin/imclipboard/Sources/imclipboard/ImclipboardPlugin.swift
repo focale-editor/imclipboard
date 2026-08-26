@@ -33,7 +33,7 @@ public class ImclipboardPlugin: NSObject, FlutterPlugin {
       switch call.method {
       case "isSupported":
         result(true)
-      case "readImageFiles":
+      case "readFiles":
         result(clipboardFilePaths())
       case "readImageInfo":
         result(try clipboardImage(includePng: false)?.map)

@@ -30,7 +30,7 @@ final class _FakePlatform extends ImClipboardPlatform {
   Future<ClipboardReadResult<ClipboardImage>> readImage() async => ClipboardReadResult(supported: true, value: image);
 
   @override
-  Future<ClipboardReadResult<List<String>>> readImageFiles() async => const ClipboardReadResult(supported: true, value: <String>['/tmp/image.png']);
+  Future<ClipboardReadResult<List<String>>> readFiles() async => const ClipboardReadResult(supported: true, value: <String>['/tmp/image.png']);
 
   @override
   Future<ClipboardReadResult<ClipboardImageInfo>> readImageInfo() async => ClipboardReadResult(supported: true, value: image.info);
@@ -78,7 +78,7 @@ void main() {
     expect(await clipboard.isSupported(), isTrue);
     expect((await clipboard.readImageInfo()).value, fake.image.info);
     expect((await clipboard.readImage()).value, same(fake.image));
-    expect((await clipboard.readImageFiles()).value, <String>['/tmp/image.png']);
+    expect((await clipboard.readFiles()).value, <String>['/tmp/image.png']);
     expect(await clipboard.writeImage(Uint8List.fromList(<int>[1]), token: 'copy'), isTrue);
     expect(fake.writeCount, 1);
   });

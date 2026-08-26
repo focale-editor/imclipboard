@@ -16,7 +16,7 @@ void main() {
 
     expect(await clipboard.isSupported(), isFalse);
     expect((await clipboard.readImage()).supported, isFalse);
-    expect((await clipboard.readImageFiles()).supported, isFalse);
+    expect((await clipboard.readFiles()).supported, isFalse);
     expect(await clipboard.writeImage(Uint8List.fromList(<int>[1])), isFalse);
   });
 
@@ -94,13 +94,13 @@ void main() {
       channel,
       (call) async => switch (call.method) {
         'isSupported' => true,
-        'readImageFiles' => <String>['/tmp/first.png', '/tmp/first.png', '/tmp/second.jpg'],
+        'readFiles' => <String>['/tmp/first.png', '/tmp/first.png', '/tmp/second.jpg'],
         _ => null,
       },
     );
     final MethodChannelImClipboard clipboard = MethodChannelImClipboard(methodChannel: channel);
 
-    final ClipboardReadResult<List<String>> read = await clipboard.readImageFiles();
+    final ClipboardReadResult<List<String>> read = await clipboard.readFiles();
 
     expect(read.value, <String>['/tmp/first.png', '/tmp/second.jpg']);
   });
@@ -112,7 +112,7 @@ void main() {
     );
     final MethodChannelImClipboard clipboard = MethodChannelImClipboard(methodChannel: channel);
 
-    expect((await clipboard.readImageFiles()).value, <String>[r'C:\Images\photo.png']);
+    expect((await clipboard.readFiles()).value, <String>[r'C:\Images\photo.png']);
   });
 
   test('rejects malformed native file paths', () async {
@@ -122,7 +122,7 @@ void main() {
     );
     final MethodChannelImClipboard clipboard = MethodChannelImClipboard(methodChannel: channel);
 
-    await expectLater(clipboard.readImageFiles(), throwsA(isA<ImClipboardException>()));
+    await expectLater(clipboard.readFiles(), throwsA(isA<ImClipboardException>()));
   });
 
   test('rejects malformed native metadata', () async {

@@ -601,7 +601,7 @@ void ImclipboardPlugin::HandleMethodCall(
     result->Success(flutter::EncodableValue(true));
     return;
   }
-  if (method_call.method_name() == "readImageFiles") {
+  if (method_call.method_name() == "readFiles") {
     std::vector<std::string> files;
     std::string error;
     if (!ReadClipboardFiles(window_, &files, &error)) {

@@ -196,7 +196,7 @@ void HandleMethodCall(FlMethodCall* call) {
   }
 
   GtkClipboard* clipboard = SystemClipboard();
-  if (std::strcmp(method, "readImageFiles") == 0) {
+  if (std::strcmp(method, "readFiles") == 0) {
     g_autoptr(FlValue) result = ReadLocalFiles(clipboard);
     fl_method_call_respond_success(call, result, nullptr);
     return;

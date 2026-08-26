@@ -2,6 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:imclipboard/src/image_format.dart';
 import 'package:imcodec/imcodec.dart' as imcodec;
 
+/// Data transferred to the worker isolate for a complete image conversion.
+typedef _ImageTranscodeRequest = ({
+  Uint8List encodedBytes,
+  imcodec.ImageFormat format,
+  int maxDecodedPixels,
+});
+
 /// Normalizes a natively supported encoded image to PNG with Imcodec.
 Future<Uint8List> normalizeImageToPng(
   Uint8List encodedBytes, {
@@ -20,15 +27,24 @@ Future<Uint8List> normalizeImageToPng(
     return encodedBytes;
   }
 
-  final imcodec.Image decodedImage = await imcodec.decodeImage(
-    encodedBytes,
-    maxPixels: maxDecodedPixels,
+  return compute(
+    _transcodeImage,
+    (
+      encodedBytes: encodedBytes,
+      format: detectedFormat,
+      maxDecodedPixels: maxDecodedPixels,
+    ),
+    debugLabel: 'Imclipboard image transcoding',
   );
-  return compute(_encodePng, decodedImage, debugLabel: 'Imclipboard PNG encoding');
 }
 
-/// Encodes a decoded image in a worker isolate when the platform supports it.
-Uint8List _encodePng(imcodec.Image image) => imcodec.encodePng(image);
+/// Decodes and encodes images without blocking the UI isolate.
+Future<Uint8List> _transcodeImage(_ImageTranscodeRequest request) async => await imcodec
+    .decodeImage(
+      request.encodedBytes,
+      maxPixels: request.maxDecodedPixels,
+    )
+    .then(imcodec.encodePng);
 
 /// Maps the public clipboard encoding to its Imcodec counterpart.
 imcodec.ImageFormat _toImcodecFormat(ClipboardImageFormat format) => switch (format) {

@@ -39,12 +39,14 @@ Future<Uint8List> normalizeImageToPng(
 }
 
 /// Decodes and encodes images without blocking the UI isolate.
-Future<Uint8List> _transcodeImage(_ImageTranscodeRequest request) async => await imcodec
-    .decodeImage(
-      request.encodedBytes,
-      maxPixels: request.maxDecodedPixels,
-    )
-    .then(imcodec.encodePng);
+Future<Uint8List> _transcodeImage(_ImageTranscodeRequest request) => imcodec.encodeImageWith(
+  imcodec.onIsolates,
+  imcodec.decodeImage(
+    request.encodedBytes,
+    maxPixels: request.maxDecodedPixels,
+  ),
+  format: .png,
+);
 
 /// Maps the public clipboard encoding to its Imcodec counterpart.
 imcodec.ImageFormat _toImcodecFormat(ClipboardImageFormat format) => switch (format) {

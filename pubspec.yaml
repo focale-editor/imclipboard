@@ -13,7 +13,7 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  imcodec: ^0.1.5
+  imcodec: '>=0.3.0 <0.4.0'
   plugin_platform_interface: ^2.1.8
   web: ^1.1.1
 

@@ -3,6 +3,9 @@ enum ClipboardImageFormat {
   /// Windows bitmap image.
   bmp,
 
+  /// Graphics Interchange Format image.
+  gif,
+
   /// Joint Photographic Experts Group image.
   jpeg,
 

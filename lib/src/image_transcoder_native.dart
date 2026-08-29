@@ -51,6 +51,7 @@ Future<Uint8List> _transcodeImage(_ImageTranscodeRequest request) => imcodec.enc
 /// Maps the public clipboard encoding to its Imcodec counterpart.
 imcodec.ImageFormat _toImcodecFormat(ClipboardImageFormat format) => switch (format) {
   ClipboardImageFormat.bmp => imcodec.ImageFormat.bmp,
+  ClipboardImageFormat.gif => imcodec.ImageFormat.gif,
   ClipboardImageFormat.jpeg => imcodec.ImageFormat.jpeg,
   ClipboardImageFormat.jpegXl => imcodec.ImageFormat.jpegXl,
   ClipboardImageFormat.png => imcodec.ImageFormat.png,

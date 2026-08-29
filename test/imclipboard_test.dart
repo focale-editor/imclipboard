@@ -131,7 +131,7 @@ void main() {
         token: format.name,
       );
       final Uint8List pngBytes = fake.writtenPngBytes ?? (throw StateError('The fake platform received no PNG bytes.'));
-      final imcodec.Image decodedImage = await imcodec.decodePng(pngBytes);
+      final imcodec.Image decodedImage = imcodec.decodePng(pngBytes);
 
       expect(written, isTrue, reason: format.name);
       expect(imcodec.ImageFormat.sniff(pngBytes), imcodec.ImageFormat.png, reason: format.name);

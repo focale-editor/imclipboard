@@ -104,15 +104,15 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.0"
   imcodec:
     dependency: transitive
     description:
       name: imcodec
-      sha256: e3eb8854660f6b09cf55aed8a2e629c04b723b47d42a2bf978148de11554aaee
+      sha256: "0ed07414e4d18fc6018f00b1e9fb18f7c891451d50cf7129ad278758e286755d"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.1"
+    version: "0.4.1"
   integration_test:
     dependency: "direct dev"
     description: flutter

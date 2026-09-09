@@ -41,10 +41,12 @@ Future<Uint8List> normalizeImageToPng(
 /// Decodes and encodes images without blocking the UI isolate.
 Future<Uint8List> _transcodeImage(_ImageTranscodeRequest request) => imcodec.encodeImageWith(
   imcodec.onIsolates,
-  imcodec.decodeImage(
-    request.encodedBytes,
-    maxPixels: request.maxDecodedPixels,
-  ),
+  imcodec
+      .decodeImageData(
+        request.encodedBytes,
+        maxPixels: request.maxDecodedPixels,
+      )
+      .toImage(),
   format: .png,
 );
 

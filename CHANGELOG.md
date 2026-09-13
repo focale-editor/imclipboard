@@ -1,5 +1,10 @@
 # 📰 Imclipboard changelog
 
+## v0.2.2
+Released on September 13, 2026.
+
+* **DOCS**: Added contributing guide, package screenshot, and pubspec metadata. ([#41f764a](https://github.com/focale-editor/imclipboard/commit/41f764a))
+
 ## v0.2.1
 Released on September 10, 2026.
 

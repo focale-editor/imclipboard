@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="screenshots/overview.png" alt="Imclipboard package illustration" width="180">
+</p>
+
 # Imclipboard
 
 Imclipboard is a focused Flutter plugin for reading and writing images through the system clipboard. Its desktop implementation was extracted from [Focale](https://github.com/focale-editor/focale), then generalized for reuse and extended to Android, iOS, and the web.
@@ -65,3 +69,7 @@ On the web and iOS, call read methods from a visible paste button or another exp
 Tokens are optional and are not secrets. Desktop and Apple platforms store a private clipboard format, Android embeds the token in the plugin-owned content URI, and web matches it to the most recent same-page write with a local fingerprint.
 
 See the [example application](example/lib/main.dart) for copy and paste buttons that also satisfy browser user-gesture requirements.
+
+---
+
+Built for **[Focale](https://focale-editor.app)**, an advanced local image editor. Discover what these packages make possible in a real creative workflow.

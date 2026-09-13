@@ -4,6 +4,17 @@ version: 0.2.1
 homepage: https://github.com/focale-editor/imclipboard
 repository: https://github.com/focale-editor/imclipboard
 
+topics:
+  - clipboard
+  - image
+  - cross-platform
+  - flutter-plugin
+  - web
+
+screenshots:
+  - description: 'A flat illustration of copying and pasting raster images.'
+    path: screenshots/overview.png
+
 environment:
   sdk: '>=3.13.0 <4.0.0'
   flutter: '>=3.47.0'

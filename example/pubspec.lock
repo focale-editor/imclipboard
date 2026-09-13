@@ -104,15 +104,15 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.2.1"
   imcodec:
     dependency: transitive
     description:
       name: imcodec
-      sha256: "0ed07414e4d18fc6018f00b1e9fb18f7c891451d50cf7129ad278758e286755d"
+      sha256: b18440ce5e850b0fe874ad7e7e7c7f6d8f003288a20e02c9444ef72f464b8c1a
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.1"
+    version: "0.4.3"
   integration_test:
     dependency: "direct dev"
     description: flutter
@@ -186,10 +186,10 @@ packages:
     dependency: transitive
     description:
       name: platform
-      sha256: "5d6b1b0036a5f331ebc77c850ebc8506cbc1e9416c27e59b439f917a902a4984"
+      sha256: a36d119c13416516a7b5913fbe8af8531e11633d784c550b2125f76c758524ec
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.6"
+    version: "3.2.0"
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -295,18 +295,18 @@ packages:
     dependency: transitive
     description:
       name: webdriver
-      sha256: "2f3a14ca026957870cfd9c635b83507e0e51d8091568e90129fbf805aba7cade"
+      sha256: "28b82ec894fed45dd71c23ba62d1af973ed97dd59a4f5790a4d38b0b13e5657e"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0"
+    version: "3.2.0"
   zcodec:
     dependency: transitive
     description:
       name: zcodec
-      sha256: "90d083c5aa79c286f8888dcd139bdc7bb5ff1df6fa61dbb4e93e4f55b847e059"
+      sha256: db516a895244b5ef9adfce79dd725b772d6c0f040d828e741cb8474cc31281d2
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.0"
+    version: "0.2.2"
 sdks:
   dart: ">=3.13.1 <4.0.0"
   flutter: ">=3.47.0"

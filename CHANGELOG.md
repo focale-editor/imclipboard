@@ -1,5 +1,11 @@
 # 📰 Imclipboard changelog
 
+## v0.3.0
+Released on September 24, 2026.
+
+* **BREAKING CHORE**: Updated `imcodec`. ([#9e07351](https://github.com/focale-editor/imclipboard/commit/9e07351))
+* **CHORE**: Improved performances on Windows, Linux and Android. ([#5f14230](https://github.com/focale-editor/imclipboard/commit/5f14230))
+
 ## v0.2.2
 Released on September 13, 2026.
 

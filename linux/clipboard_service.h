@@ -40,7 +40,7 @@ class ClipboardService : public std::enable_shared_from_this<ClipboardService> {
 
   // Validates on a worker, then publishes the unchanged PNG and optional token.
   void Write(Bytes png, std::string token,
-             std::function<void(std::string)> complete);
+             std::function<void(std::string)> complete, bool generated_png = false);
   // Reads one owner generation; metadata reads skip pixel decoding.
   void Read(bool include_png, std::function<void(ImageReply)> complete);
   // Resolves local regular file URIs on a worker.

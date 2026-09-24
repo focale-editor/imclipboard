@@ -112,6 +112,40 @@ TEST_F(ClipboardServiceTest, WritesOriginalPngAndTokenWithoutReencoding) {
   gtk_selection_data_free(transfer);
 }
 
+TEST_F(ClipboardServiceTest, GeneratedPngPublishesOriginalBytesAndRejectsTruncation) {
+  const Bytes png = Png();
+  bool done = false;
+  service->Write(png, "generated", [&](std::string error) {
+    EXPECT_TRUE(error.empty()) << error;
+    done = true;
+  }, true);
+  ASSERT_TRUE(Wait([&] { return done; }));
+  const ImageReply image = Read(true);
+  ASSERT_NE(image.image, nullptr);
+  EXPECT_EQ(image.image->token, "generated");
+  EXPECT_TRUE(g_bytes_equal(png.get(), image.image->png.get()));
+  GtkSelectionData* transfer = gtk_clipboard_wait_for_contents(
+      clipboard, gdk_atom_intern_static_string("image/png"));
+  ASSERT_NE(transfer, nullptr);
+  gsize length;
+  const void* data = g_bytes_get_data(png.get(), &length);
+  EXPECT_EQ(gtk_selection_data_get_length(transfer), static_cast<int>(length));
+  EXPECT_EQ(std::memcmp(gtk_selection_data_get_data(transfer), data, length), 0);
+  gtk_selection_data_free(transfer);
+  for (gsize truncated : {gsize(0), gsize(33), length - 1}) {
+    done = false;
+    service->Write(Bytes(g_bytes_new(data, truncated), g_bytes_unref), "bad",
+      [&](std::string error) {
+        EXPECT_FALSE(error.empty());
+        done = true;
+      }, true);
+    ASSERT_TRUE(Wait([&] { return done; }));
+    const ImageReply retained = Read(false);
+    ASSERT_NE(retained.image, nullptr);
+    EXPECT_EQ(retained.image->token, "generated");
+  }
+}
+
 TEST_F(ClipboardServiceTest,
        ForeignPngPassesThroughAndOwnCacheDoesNotSurviveReplacement) {
   bool done = false;

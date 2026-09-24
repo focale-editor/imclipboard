@@ -77,6 +77,31 @@ bool PngInfo(const guint8* bytes, gsize length, Image* image) {
   return true;
 }
 
+// Only for encoder-owned PNGs: bound chunks without decoding compressed pixels.
+// The ordinary write path continues to fully decode all external input.
+ImageReply GeneratedPng(Bytes bytes) {
+  auto image = std::make_shared<Image>();
+  gsize length = 0;
+  const auto* data = static_cast<const guint8*>(g_bytes_get_data(bytes.get(), &length));
+  if (!PngInfo(data, length, image.get())) return {nullptr, "Invalid generated PNG header"};
+  bool pixels = false;
+  for (gsize offset = 33; offset + 12 <= length;) {
+    const guint32 count = (guint32(data[offset]) << 24) | (guint32(data[offset + 1]) << 16) |
+                          (guint32(data[offset + 2]) << 8) | data[offset + 3];
+    if (count > length - offset - 12) break;
+    const auto* type = data + offset + 4;
+    if (std::memcmp(type, "IHDR", 4) == 0) break;
+    if (std::memcmp(type, "IDAT", 4) == 0 && count > 0) pixels = true;
+    if (std::memcmp(type, "IEND", 4) == 0) {
+      if (!pixels || count != 0 || offset + 12 != length) break;
+      image->png = std::move(bytes);
+      return {image, {}};
+    }
+    offset += gsize(count) + 12;
+  }
+  return {nullptr, "Incomplete generated PNG"};
+}
+
 // Reject enormous decoded images before the loader allocates their full
 // surface.
 struct DecodeSize {
@@ -282,12 +307,12 @@ void ClipboardService::Next() {
 }
 
 void ClipboardService::Write(Bytes png, std::string token,
-                             std::function<void(std::string)> complete) {
+                             std::function<void(std::string)> complete, bool generated_png) {
   auto self = shared_from_this();
-  Enqueue([self, png, token, complete] {
+  Enqueue([self, png, token, complete, generated_png] {
     auto reply = std::make_shared<ImageReply>();
     Background(
-        [png, reply] { *reply = Decode(png, true, true); },
+        [png, reply, generated_png] { *reply = generated_png ? GeneratedPng(png) : Decode(png, true, true); },
         [self, token, reply, complete] {
           if (!reply->image) {
             complete(reply->error);

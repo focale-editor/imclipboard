@@ -103,12 +103,18 @@ final class MethodChannelImClipboard extends ImClipboardPlatform {
   Future<bool> writeImage(
     Uint8List pngBytes, {
     String? token,
-  }) async {
+  }) => _writeImage(pngBytes, token: token);
+
+  @override
+  Future<bool> writeGeneratedPng(Uint8List pngBytes, {String? token}) => _writeImage(pngBytes, token: token, generated: true);
+
+  /// Keeps generated-image trust explicit at the platform boundary.
+  Future<bool> _writeImage(Uint8List pngBytes, {String? token, bool generated = false}) async {
     validateWriteArguments(pngBytes, token);
     if (!await isSupported()) {
       return false;
     }
-    final Map<String, Object> arguments = <String, Object>{'bytes': pngBytes};
+    final Map<String, Object> arguments = <String, Object>{'bytes': pngBytes, if (generated) 'generatedPng': true};
     if (token != null) {
       arguments['token'] = token;
     }

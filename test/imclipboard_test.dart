@@ -101,6 +101,15 @@ void main() {
     expect(fake.writeCount, 1);
   });
 
+  test('generated PNG falls back to normal writes on other platforms', () async {
+    final _FakePlatform fake = _FakePlatform();
+    ImClipboardPlatform.instance = fake;
+    final Uint8List bytes = Uint8List.fromList([1, 2, 3]);
+    expect(await const ImClipboard().writeGeneratedPng(bytes, token: 'owned'), isTrue);
+    expect(fake.writtenPngBytes, same(bytes));
+    expect(fake.writtenToken, 'owned');
+  });
+
   test('passes PNG input through without transcoding', () async {
     final _FakePlatform fake = _FakePlatform();
     ImClipboardPlatform.instance = fake;

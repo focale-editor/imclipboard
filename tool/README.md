@@ -13,9 +13,10 @@ GDK_BACKEND=x11 /tmp/imclipboard-benchmark /path/to/image.jpg
 ```
 
 The input is converted to RGBA PNG at compression level 1 before measurements.
-Three rounds compare the former PNG decode/default re-encode pipeline with the
-current owned input copy, asynchronous full validation, publication, and GTK
-supply callback. The supplied bytes must equal the input exactly. This measures
+Three rounds compare ordinary fully validated writes with generated-PNG writes,
+including the owned input copy, asynchronous validation and publication. GTK
+supply is measured separately. An optional second argument selects the input
+PNG compression level; GTK may normalize encoder settings. The supplied bytes must equal the input exactly. This measures
 native component cost, not a complete Flutter Copy/Cut operation or cross-process
 clipboard transfer. A private selection has no desktop persistence manager:
 manager acknowledgement and application-exit persistence are not measured.
@@ -51,3 +52,18 @@ offsets and protection against mutation through the exposed buffer. Android
 unit tests exercise bounded provider reads and PNG detection. Windows native
 tests exercise asynchronous failure callbacks, write ordering and destruction
 with work pending; they require a Windows build and message loop.
+
+## Generated-PNG follow-up
+
+September 24, 2026, same photo, 28,655,167 input PNG bytes. Three rounds:
+
+| Round | Validated write | Generated PNG write | GTK supply |
+|-------|----------------:|--------------------:|-----------:|
+| 1 | 269.207 ms | 17.422 ms | 22.339 ms |
+| 2 | 243.635 ms | 19.872 ms | 26.112 ms |
+| 3 | 228.248 ms | 17.946 ms | 26.508 ms |
+
+Median native write: 243.635 → 17.946 ms (92.6% lower). This comparison omits
+Flutter channel serialization and cross-process transfer; it does not imply
+that complete Copy/Cut takes 18 ms. Supplied PNG bytes are checked for equality.
+The generated path validates structure only; ordinary writes keep full decoding.

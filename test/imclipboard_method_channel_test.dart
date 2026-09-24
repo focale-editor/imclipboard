@@ -76,6 +76,25 @@ void main() {
     expect((writeCall?.arguments as Map<Object?, Object?>)['token'], 'copy-id');
   });
 
+  test('only generated PNG explicitly opts out of redundant decoding', () async {
+    final List<MethodCall> writes = [];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'isSupported') {
+        return true;
+      }
+      writes.add(call);
+      return null;
+    });
+    final MethodChannelImClipboard clipboard = MethodChannelImClipboard(methodChannel: channel);
+    final Uint8List bytes = Uint8List.fromList([137, 80, 78, 71]);
+    await clipboard.writeGeneratedPng(bytes, token: 'generated');
+    await clipboard.writeImage(bytes);
+    expect(writes.first.method, 'writeImage');
+    expect(writes.first.arguments, {'bytes': bytes, 'token': 'generated', 'generatedPng': true});
+    expect((writes.last.arguments as Map).containsKey('generatedPng'), isFalse);
+    await expectLater(clipboard.writeGeneratedPng(Uint8List(0)), throwsA(isA<ImClipboardException>()));
+  });
+
   test('omits the token argument when none is supplied', () async {
     MethodCall? writeCall;
     messenger.setMockMethodCallHandler(channel, (call) async {

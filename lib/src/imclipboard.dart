@@ -22,6 +22,13 @@ final class ImClipboard {
   /// Whether this platform provides an image clipboard implementation.
   Future<bool> isSupported() => ImClipboardPlatform.instance.isSupported();
 
+  /// Copies PNG bytes produced by the application's own encoder.
+  ///
+  /// The caller guarantees valid pixel data. Platforms may skip pixel decoding
+  /// while still checking size and PNG structure. Use [writeImage] for external
+  /// data. Unsupported optimizations fall back to ordinary validated writes.
+  Future<bool> writeGeneratedPng(Uint8List pngBytes, {String? token}) => ImClipboardPlatform.instance.writeGeneratedPng(pngBytes, token: token);
+
   /// Reads image dimensions without transferring PNG bytes over native channels.
   Future<ClipboardReadResult<ClipboardImageInfo>> readImageInfo() => ImClipboardPlatform.instance.readImageInfo();
 

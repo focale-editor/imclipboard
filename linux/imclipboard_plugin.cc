@@ -110,6 +110,8 @@ void HandleMethodCall(ImclipboardPlugin* plugin, FlMethodCall* raw_call) {
                                    nullptr);
       return;
     }
+    FlValue* generated = fl_value_lookup_string(arguments, "generatedPng");
+    const bool generated_png = generated != nullptr && fl_value_get_type(generated) == FL_VALUE_TYPE_BOOL && fl_value_get_bool(generated);
     imclipboard::Bytes png(
         g_bytes_new(fl_value_get_uint8_list(bytes), fl_value_get_length(bytes)),
         g_bytes_unref);
@@ -122,7 +124,7 @@ void HandleMethodCall(ImclipboardPlugin* plugin, FlMethodCall* raw_call) {
               else
                 fl_method_call_respond_error(call.get(), "write_failed",
                                              error.c_str(), nullptr, nullptr);
-            });
+            }, generated_png);
     return;
   }
   fl_method_call_respond_not_implemented(raw_call, nullptr);

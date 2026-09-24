@@ -142,6 +142,13 @@ abstract class ImClipboardPlatform extends PlatformInterface {
     _instance = instance;
   }
 
+  /// Publishes a PNG produced by the caller's own encoder.
+  ///
+  /// The caller guarantees valid compressed pixels. Native implementations may
+  /// validate structure and bounds without decoding every pixel. Never use this
+  /// for downloaded, imported, or otherwise untrusted encoded images.
+  Future<bool> writeGeneratedPng(Uint8List pngBytes, {String? token}) => writeImage(pngBytes, token: token);
+
   /// Whether this platform provides image clipboard operations.
   Future<bool> isSupported() => throw UnimplementedError('isSupported() has not been implemented.');
 

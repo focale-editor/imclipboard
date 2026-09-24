@@ -20,11 +20,11 @@ struct Heartbeat {
 }  // namespace
 
 int main(int argc, char** argv) {
-  if (argc != 2 || !gtk_init_check(nullptr, nullptr) ||
+  if ((argc != 2 && argc != 3) || !gtk_init_check(nullptr, nullptr) ||
       !GDK_IS_X11_DISPLAY(gdk_display_get_default())) {
     std::fprintf(
         stderr,
-        "Usage: GDK_BACKEND=x11 benchmark_linux_clipboard image-file\n");
+        "Usage: GDK_BACKEND=x11 benchmark_linux_clipboard image-file [png-compression-level]\n");
     return 1;
   }
   g_autoptr(GError) error = nullptr;
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   gchar* encoded = nullptr;
   gsize length = 0;
   if (!gdk_pixbuf_save_to_buffer(rgba, &encoded, &length, "png", &error,
-                                 "compression", "1", nullptr))
+                                 "compression", argc == 3 ? argv[2] : "1", nullptr))
     return 1;
   imclipboard::Bytes input(g_bytes_new_take(encoded, length), g_bytes_unref);
   std::printf("dimensions=%dx%d png_bytes=%zu\n", gdk_pixbuf_get_width(rgba),
@@ -48,25 +48,6 @@ int main(int argc, char** argv) {
       gtk_clipboard_get(gdk_atom_intern(name.c_str(), FALSE));
   auto service = std::make_shared<imclipboard::ClipboardService>(clipboard);
   for (int round = 0; round < 3; ++round) {
-    // Original Linux path: decode PNG, then re-encode when GTK supplies a
-    // target.
-    const gint64 before = g_get_monotonic_time();
-    g_autoptr(GdkPixbufLoader) loader =
-        gdk_pixbuf_loader_new_with_type("png", nullptr);
-    if (!gdk_pixbuf_loader_write(loader, reinterpret_cast<guint8*>(encoded),
-                                 length, &error) ||
-        !gdk_pixbuf_loader_close(loader, &error))
-      return 1;
-    gchar* output = nullptr;
-    gsize output_length = 0;
-    if (!gdk_pixbuf_save_to_buffer(gdk_pixbuf_loader_get_pixbuf(loader),
-                                   &output, &output_length, "png", &error,
-                                   nullptr))
-      return 1;
-    const double old_ms = (g_get_monotonic_time() - before) / 1000.;
-    g_free(output);
-    g_clear_object(&loader);
-
     Heartbeat heartbeat;
     const guint timer = g_timeout_add(
         1,
@@ -92,6 +73,17 @@ int main(int argc, char** argv) {
     Wait([&] { return done; });
     if (!valid) return 1;
     const double write_ms = (g_get_monotonic_time() - start) / 1000.;
+    const gint64 generated_start = g_get_monotonic_time();
+    done = false;
+    service->Write(
+        imclipboard::Bytes(g_bytes_new(encoded, length), g_bytes_unref),
+        "generated", [&](std::string failure) {
+          valid = failure.empty();
+          done = true;
+        }, true);
+    Wait([&] { return done; });
+    if (!valid) return 1;
+    const double generated_ms = (g_get_monotonic_time() - generated_start) / 1000.;
     const gint64 supply_start = g_get_monotonic_time();
     GtkSelectionData* supplied = gtk_clipboard_wait_for_contents(
         clipboard, gdk_atom_intern_static_string("image/png"));
@@ -113,9 +105,9 @@ int main(int argc, char** argv) {
     if (!valid) return 1;
     const double info_ms = (g_get_monotonic_time() - info_start) / 1000.;
     std::printf(
-        "round=%d old_decode_encode_ms=%.3f write_ms=%.3f supply_ms=%.3f "
+        "round=%d validated_write_ms=%.3f generated_write_ms=%.3f supply_ms=%.3f "
         "info_ms=%.3f heartbeat_max_gap_ms=%.3f ticks=%u\n",
-        round, old_ms, write_ms, supply_ms, info_ms,
+        round, write_ms, generated_ms, supply_ms, info_ms,
         heartbeat.maximum_gap / 1000., heartbeat.ticks);
     std::fflush(stdout);
   }

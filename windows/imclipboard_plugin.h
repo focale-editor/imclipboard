@@ -9,6 +9,9 @@
 
 namespace imclipboard {
 
+// Serializes background bitmap preparation and main-thread publication.
+class ClipboardWriter;
+
 // Implements PNG image clipboard operations for Windows.
 class ImclipboardPlugin : public flutter::Plugin {
  public:
@@ -26,6 +29,7 @@ class ImclipboardPlugin : public flutter::Plugin {
 
  private:
   HWND window_;
+  std::unique_ptr<ClipboardWriter> writer_;
 };
 
 }  // namespace imclipboard

@@ -76,7 +76,7 @@ final class ImClipboardWeb extends ImClipboardPlatform {
         final ClipboardImageInfo info = ClipboardImageInfo(width: parsedInfo.width, height: parsedInfo.height, token: token);
         return ClipboardReadResult(
           supported: true,
-          value: ClipboardImage(info: info, pngBytes: bytes),
+          value: ClipboardImage.fromOwnedBytes(info: info, pngBytes: bytes),
         );
       }
       return const ClipboardReadResult(supported: true);

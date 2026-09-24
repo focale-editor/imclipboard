@@ -58,6 +58,30 @@ final ClipboardImageInfo? info = result.value;
 
 On the web and iOS, call read methods from a visible paste button or another explicit user action. Browsers may reject an otherwise supported operation with `ImClipboardException` when clipboard permission or transient user activation is missing.
 
+## Large-image transfers
+
+Linux keeps the original PNG bytes for GTK image targets and PNG file reads.
+Validation and fallback conversions run on workers; GTK ownership, publication,
+and callbacks stay on the main context. Calls are serialized. Metadata reads
+inspect headers without allocating the full pixel surface. Cached data is used
+only while the plugin still owns that exact clipboard publication, and a foreign
+owner change during a read produces an error instead of mixing images and tokens.
+Persistence is still requested through GTK's clipboard manager; availability
+following application exit depends on that manager.
+
+Android retains the original PNG on reads after validating it with BitmapFactory;
+other formats still convert to PNG. Windows prepares PNG and `CF_DIBV5` allocations
+on a worker, then publishes them together on the platform thread in write order.
+Await `writeImage` before depending on the new clipboard contents.
+
+Platform reads return PNG bytes through an unmodifiable view without an additional
+Dart buffer copy. `ClipboardImage(...)` still makes a defensive copy when callers
+construct their own result. `ClipboardImage.fromOwnedBytes(...)` instead takes
+ownership: callers must relinquish all mutable aliases to the supplied buffer.
+
+See [the Linux component benchmark](tool/README.md) for commands, results, and
+measurement limits.
+
 ## Result and error semantics
 
 - `supported: false` means the native plugin or browser API is unavailable.

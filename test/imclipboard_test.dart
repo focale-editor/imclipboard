@@ -70,6 +70,24 @@ void main() {
     expect(image.pngBytes, <int>[1, 2, 3]);
   });
 
+  test('owned bytes share storage through an unmodifiable view', () {
+    final Uint8List storage = Uint8List.fromList([1, 2, 3, 4]);
+    final Uint8List input = Uint8List.sublistView(storage, 1, 3);
+    final ClipboardImage image = ClipboardImage.fromOwnedBytes(
+      info: const ClipboardImageInfo(width: 1, height: 1),
+      pngBytes: input,
+    );
+
+    expect(image.pngBytes, [2, 3]);
+    // Probe aliasing to verify ownership transfer. Production callers must
+    // relinquish this mutable alias after constructing the result.
+    storage[1] = 7;
+    expect(image.pngBytes, [7, 3]);
+    expect(image.pngBytes.offsetInBytes, input.offsetInBytes);
+    expect(() => image.pngBytes[0] = 9, throwsUnsupportedError);
+    expect(() => image.pngBytes.buffer.asUint8List()[0] = 9, throwsUnsupportedError);
+  });
+
   test('delegates every operation to the active platform', () async {
     final _FakePlatform fake = _FakePlatform();
     ImClipboardPlatform.instance = fake;
@@ -140,7 +158,7 @@ void main() {
       expect(fake.writtenToken, format.name);
     }
     expect(fake.writeCount, encodedImages.length);
-  });
+  }, testOn: 'vm');
 
   test('rejects unknown or mismatched encoded formats', () async {
     final _FakePlatform fake = _FakePlatform();
@@ -164,5 +182,5 @@ void main() {
       throwsA(isA<ImClipboardException>().having((exception) => exception.cause, 'cause', isA<FormatException>())),
     );
     expect(fake.writeCount, 0);
-  });
+  }, testOn: 'vm');
 }

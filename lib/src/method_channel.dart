@@ -69,7 +69,7 @@ final class MethodChannelImClipboard extends ImClipboardPlatform {
     }
     return ClipboardReadResult(
       supported: true,
-      value: ClipboardImage(info: info, pngBytes: bytes),
+      value: ClipboardImage.fromOwnedBytes(info: info, pngBytes: bytes),
     );
   }
 

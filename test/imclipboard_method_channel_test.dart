@@ -12,6 +12,8 @@ void main() {
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
   test('reports an absent native implementation as unsupported', () async {
+    // Simulate a missing plugin explicitly; a browser has no native reply loop.
+    messenger.setMockMethodCallHandler(channel, (call) async => throw MissingPluginException());
     final MethodChannelImClipboard clipboard = MethodChannelImClipboard(methodChannel: channel);
 
     expect(await clipboard.isSupported(), isFalse);
@@ -66,6 +68,7 @@ void main() {
 
     final ClipboardReadResult<ClipboardImage> read = await clipboard.readImage();
     expect(read.value?.pngBytes, png);
+    expect(() => read.value!.pngBytes[0] = 0, throwsUnsupportedError);
     expect(await clipboard.writeImage(png, token: 'copy-id'), isTrue);
 
     expect(writeCall?.method, 'writeImage');

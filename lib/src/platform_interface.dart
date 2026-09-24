@@ -41,15 +41,26 @@ final class ClipboardImage {
 
   /// PNG-encoded image bytes.
   ///
-  /// The buffer is a defensive copy owned by this result. Treat it as
-  /// read-only so subsequent consumers receive the original clipboard image.
+  /// Treat this buffer as read-only so subsequent consumers receive the original
+  /// clipboard image. [ClipboardImage.fromOwnedBytes] enforces this with an
+  /// unmodifiable view.
   final Uint8List pngBytes;
 
-  /// Creates a clipboard image.
+  /// Creates a clipboard image by copying the supplied bytes.
   ClipboardImage({
     required this.info,
     required Uint8List pngBytes,
   }) : pngBytes = Uint8List.fromList(pngBytes);
+
+  /// Takes ownership of encoded bytes without copying their storage.
+  ///
+  /// The caller must relinquish all mutable aliases to [pngBytes]. The result
+  /// exposes an unmodifiable view. Prefer the copying constructor when the
+  /// buffer is still used by another part of the application.
+  ClipboardImage.fromOwnedBytes({
+    required this.info,
+    required Uint8List pngBytes,
+  }) : pngBytes = pngBytes.asUnmodifiableView();
 }
 
 /// The result of inspecting a platform clipboard.

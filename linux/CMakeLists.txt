@@ -14,6 +14,7 @@ set(PLUGIN_NAME "imclipboard_plugin")
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "imclipboard_plugin.cc"
+  "clipboard_service.cc"
 )
 
 # Define the plugin library target. Its name must not be changed (see comment
@@ -79,6 +80,7 @@ FetchContent_MakeAvailable(googletest)
 # sources directly into the test binary rather than using the shared library.
 add_executable(${TEST_RUNNER}
   test/imclipboard_plugin_test.cc
+  test/clipboard_service_test.cc
   ${PLUGIN_SOURCES}
 )
 apply_standard_settings(${TEST_RUNNER})

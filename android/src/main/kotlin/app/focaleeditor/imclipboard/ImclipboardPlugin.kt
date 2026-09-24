@@ -107,10 +107,19 @@ class ImclipboardPlugin :
             return ClipboardImage(bounds.outWidth, bounds.outHeight, token, null)
         }
 
-        val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream)
-        } ?: throw IOException("Android could not decode the clipboard image")
+        val encoded = context.contentResolver.openInputStream(uri)?.use { stream ->
+            readEncodedImage(stream, MAXIMUM_ENCODED_BYTES)
+        } ?: throw IOException("Android could not open the clipboard image")
+        // A provider can change between opens: validate the actual encoded payload.
+        BitmapFactory.decodeByteArray(encoded, 0, encoded.size, bounds)
+        validateDimensions(bounds.outWidth, bounds.outHeight)
+        // Decode once to preserve validation, but retain the original PNG stream.
+        val bitmap = BitmapFactory.decodeByteArray(encoded, 0, encoded.size)
+            ?: throw IOException("Android could not decode the clipboard image")
         try {
+            if (hasPngSignature(encoded)) {
+                return ClipboardImage(bitmap.width, bitmap.height, token, encoded)
+            }
             val output = LimitedByteArrayOutputStream(MAXIMUM_ENCODED_BYTES)
             if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
                 throw IOException("Android could not encode the clipboard image as PNG")
@@ -185,17 +194,6 @@ class ImclipboardPlugin :
             throw IllegalArgumentException("The clipboard image dimensions are invalid or too large")
         }
     }
-
-    private fun hasPngSignature(bytes: ByteArray): Boolean =
-        bytes.size >= 24 &&
-            bytes[0] == 0x89.toByte() &&
-            bytes[1] == 0x50.toByte() &&
-            bytes[2] == 0x4E.toByte() &&
-            bytes[3] == 0x47.toByte() &&
-            bytes[4] == 0x0D.toByte() &&
-            bytes[5] == 0x0A.toByte() &&
-            bytes[6] == 0x1A.toByte() &&
-            bytes[7] == 0x0A.toByte()
 
     private data class ClipboardImage(
         val width: Int,

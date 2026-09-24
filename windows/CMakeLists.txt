@@ -35,6 +35,21 @@ add_library(${PLUGIN_NAME} SHARED
 # full control over build settings.
 apply_standard_settings(${PLUGIN_NAME})
 
+# std::future transports worker failures back to the platform thread. Flutter's
+# runner template disables standard-library exceptions; enable them only here.
+function(imclipboard_enable_worker_exceptions target)
+  if(MSVC)
+    get_target_property(definitions ${target} COMPILE_DEFINITIONS)
+    if(definitions)
+      list(FILTER definitions EXCLUDE REGEX "^_HAS_EXCEPTIONS=")
+      set_property(TARGET ${target} PROPERTY COMPILE_DEFINITIONS "${definitions}")
+    endif()
+    target_compile_definitions(${target} PRIVATE _HAS_EXCEPTIONS=1)
+    target_compile_options(${target} PRIVATE /EHsc)
+  endif()
+endfunction()
+imclipboard_enable_worker_exceptions(${PLUGIN_NAME})
+
 # Symbols are hidden by default to reduce the chance of accidental conflicts
 # between plugins. This should not be removed; any symbols that should be
 # exported should be explicitly exported with the FLUTTER_PLUGIN_EXPORT macro.
@@ -90,6 +105,7 @@ add_executable(${TEST_RUNNER}
   ${PLUGIN_SOURCES}
 )
 apply_standard_settings(${TEST_RUNNER})
+imclipboard_enable_worker_exceptions(${TEST_RUNNER})
 target_compile_definitions(${TEST_RUNNER} PRIVATE NOMINMAX)
 target_include_directories(${TEST_RUNNER} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(${TEST_RUNNER} PRIVATE flutter_wrapper_plugin)

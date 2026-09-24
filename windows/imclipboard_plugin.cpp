@@ -9,8 +9,11 @@
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <deque>
+#include <future>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -70,9 +73,9 @@ std::string HResultMessage(const char* operation, HRESULT result) {
 }
 
 bool CreateFactory(ComPtr<IWICImagingFactory>* factory, std::string* error) {
-  const HRESULT result = ::CoCreateInstance(
-      CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
-      IID_PPV_ARGS(factory->ReleaseAndGetAddressOf()));
+  const HRESULT result =
+      ::CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
+                         IID_PPV_ARGS(factory->ReleaseAndGetAddressOf()));
   if (FAILED(result)) {
     *error = HResultMessage("Creating the WIC factory", result);
     return false;
@@ -82,8 +85,7 @@ bool CreateFactory(ComPtr<IWICImagingFactory>* factory, std::string* error) {
 
 bool DecodePngFrame(IWICImagingFactory* factory,
                     const std::vector<uint8_t>& png,
-                    ComPtr<IWICBitmapFrameDecode>* frame,
-                    std::string* error) {
+                    ComPtr<IWICBitmapFrameDecode>* frame, std::string* error) {
   if (png.empty() || png.size() > std::numeric_limits<DWORD>::max()) {
     *error = "The clipboard PNG is empty or too large";
     return false;
@@ -91,8 +93,8 @@ bool DecodePngFrame(IWICImagingFactory* factory,
   ComPtr<IWICStream> stream;
   HRESULT result = factory->CreateStream(&stream);
   if (SUCCEEDED(result)) {
-    result = stream->InitializeFromMemory(
-        const_cast<BYTE*>(png.data()), static_cast<DWORD>(png.size()));
+    result = stream->InitializeFromMemory(const_cast<BYTE*>(png.data()),
+                                          static_cast<DWORD>(png.size()));
   }
   ComPtr<IWICBitmapDecoder> decoder;
   if (SUCCEEDED(result)) {
@@ -109,10 +111,8 @@ bool DecodePngFrame(IWICImagingFactory* factory,
   return true;
 }
 
-bool EncodePng(IWICImagingFactory* factory,
-               IWICBitmapSource* source,
-               std::vector<uint8_t>* png,
-               std::string* error) {
+bool EncodePng(IWICImagingFactory* factory, IWICBitmapSource* source,
+               std::vector<uint8_t>* png, std::string* error) {
   ComPtr<IStream> stream;
   HRESULT result = ::CreateStreamOnHGlobal(nullptr, TRUE, &stream);
   ComPtr<IWICBitmapEncoder> encoder;
@@ -213,9 +213,8 @@ bool IsLocalAbsolutePath(const std::wstring& path) {
     return (character >= L'A' && character <= L'Z') ||
            (character >= L'a' && character <= L'z');
   };
-  const bool drive_path =
-      path.size() >= 3 && is_drive_letter(path[0]) && path[1] == L':' &&
-      is_slash(path[2]);
+  const bool drive_path = path.size() >= 3 && is_drive_letter(path[0]) &&
+                          path[1] == L':' && is_slash(path[2]);
   const bool extended_drive_path =
       path.size() >= 7 && path.compare(0, 4, L"\\\\?\\") == 0 &&
       is_drive_letter(path[4]) && path[5] == L':' && is_slash(path[6]);
@@ -241,8 +240,7 @@ std::optional<std::string> WideToUtf8(const std::wstring& value) {
   return result;
 }
 
-bool ReadClipboardFiles(HWND window,
-                        std::vector<std::string>* files,
+bool ReadClipboardFiles(HWND window, std::vector<std::string>* files,
                         std::string* error) {
   ScopedClipboard clipboard(window);
   if (!clipboard.opened()) {
@@ -258,15 +256,14 @@ bool ReadClipboardFiles(HWND window,
     return false;
   }
   const UINT count = ::DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
-  for (UINT index = 0;
-       index < count && files->size() < kMaximumFileCount; ++index) {
+  for (UINT index = 0; index < count && files->size() < kMaximumFileCount;
+       ++index) {
     const UINT length = ::DragQueryFileW(drop, index, nullptr, 0);
     if (length == 0 || length >= 32767) {
       continue;
     }
     std::wstring path(static_cast<size_t>(length) + 1, L'\0');
-    const UINT copied =
-        ::DragQueryFileW(drop, index, path.data(), length + 1);
+    const UINT copied = ::DragQueryFileW(drop, index, path.data(), length + 1);
     if (copied == 0) {
       continue;
     }
@@ -291,8 +288,7 @@ bool ClipboardBitmapUsesAlpha() {
   if (handle == nullptr || ::GlobalSize(handle) < sizeof(BITMAPV5HEADER)) {
     return false;
   }
-  const auto* header =
-      static_cast<const BITMAPV5HEADER*>(::GlobalLock(handle));
+  const auto* header = static_cast<const BITMAPV5HEADER*>(::GlobalLock(handle));
   const bool uses_alpha =
       header != nullptr && header->bV5Size >= sizeof(BITMAPV5HEADER) &&
       header->bV5BitCount == 32 && header->bV5AlphaMask != 0;
@@ -302,8 +298,7 @@ bool ClipboardBitmapUsesAlpha() {
   return uses_alpha;
 }
 
-std::optional<ClipboardImage> ReadClipboardImage(HWND window,
-                                                 bool include_png,
+std::optional<ClipboardImage> ReadClipboardImage(HWND window, bool include_png,
                                                  std::string* error) {
   ScopedClipboard clipboard(window);
   if (!clipboard.opened()) {
@@ -327,9 +322,9 @@ std::optional<ClipboardImage> ReadClipboardImage(HWND window,
       UINT height = 0;
       if (SUCCEEDED(frame->GetSize(&width, &height)) && width > 0 &&
           height > 0) {
-        return ClipboardImage{width, height, token,
-                              include_png ? std::move(png)
-                                          : std::vector<uint8_t>()};
+        return ClipboardImage{
+            width, height, token,
+            include_png ? std::move(png) : std::vector<uint8_t>()};
       }
     }
   }
@@ -356,8 +351,8 @@ std::optional<ClipboardImage> ReadClipboardImage(HWND window,
     ComPtr<IWICBitmap> wic_bitmap;
     const WICBitmapAlphaChannelOption alpha =
         ClipboardBitmapUsesAlpha() ? WICBitmapUseAlpha : WICBitmapIgnoreAlpha;
-    HRESULT result = factory->CreateBitmapFromHBITMAP(
-        bitmap, nullptr, alpha, &wic_bitmap);
+    HRESULT result =
+        factory->CreateBitmapFromHBITMAP(bitmap, nullptr, alpha, &wic_bitmap);
     if (FAILED(result)) {
       *error = HResultMessage("Reading the clipboard bitmap", result);
       return std::nullopt;
@@ -389,8 +384,7 @@ HGLOBAL AllocateGlobal(const void* data, size_t length) {
   return memory;
 }
 
-HGLOBAL CreateDibV5(IWICImagingFactory* factory,
-                    IWICBitmapSource* source,
+HGLOBAL CreateDibV5(IWICImagingFactory* factory, IWICBitmapSource* source,
                     std::string* error) {
   UINT width = 0;
   UINT height = 0;
@@ -410,9 +404,9 @@ HGLOBAL CreateDibV5(IWICImagingFactory* factory,
   ComPtr<IWICFormatConverter> converter;
   result = factory->CreateFormatConverter(&converter);
   if (SUCCEEDED(result)) {
-    result = converter->Initialize(
-        source, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, nullptr,
-        0, WICBitmapPaletteTypeCustom);
+    result = converter->Initialize(source, GUID_WICPixelFormat32bppBGRA,
+                                   WICBitmapDitherTypeNone, nullptr, 0,
+                                   WICBitmapPaletteTypeCustom);
   }
   if (FAILED(result)) {
     *error = HResultMessage("Converting the clipboard PNG", result);
@@ -459,91 +453,91 @@ HGLOBAL CreateDibV5(IWICImagingFactory* factory,
   return memory;
 }
 
-bool WriteClipboardImage(HWND window,
-                         const std::vector<uint8_t>& png,
-                         const std::optional<std::string>& token,
-                         std::string* error) {
-  if (png.empty() || png.size() > kMaximumEncodedBytes ||
-      (token.has_value() &&
-       (token->empty() || token->size() > 1024 ||
-        token->find('\0') != std::string::npos))) {
-    *error = "The clipboard image or token is invalid";
-    return false;
-  }
+// Owns prepared formats until Windows takes ownership during publication.
+struct PreparedClipboard {
+  HGLOBAL dib = nullptr;
+  HGLOBAL png = nullptr;
+  HGLOBAL token = nullptr;
+  std::string error;
 
-  ComPtr<IWICImagingFactory> factory;
-  if (!CreateFactory(&factory, error)) {
-    return false;
-  }
-  ComPtr<IWICBitmapFrameDecode> frame;
-  if (!DecodePngFrame(factory.Get(), png, &frame, error)) {
-    return false;
-  }
-
-  HGLOBAL dib = CreateDibV5(factory.Get(), frame.Get(), error);
-  HGLOBAL png_memory = AllocateGlobal(png.data(), png.size());
-  HGLOBAL token_memory = nullptr;
-  if (token.has_value()) {
-    const std::string terminated_token = *token + '\0';
-    token_memory =
-        AllocateGlobal(terminated_token.data(), terminated_token.size());
-  }
-  if (dib == nullptr || png_memory == nullptr ||
-      (token.has_value() && token_memory == nullptr)) {
+  ~PreparedClipboard() {
     if (dib != nullptr) ::GlobalFree(dib);
-    if (png_memory != nullptr) ::GlobalFree(png_memory);
-    if (token_memory != nullptr) ::GlobalFree(token_memory);
-    if (error->empty()) *error = "Could not allocate Windows clipboard data";
-    return false;
+    if (png != nullptr) ::GlobalFree(png);
+    if (token != nullptr) ::GlobalFree(token);
   }
+  PreparedClipboard() = default;
+  PreparedClipboard(const PreparedClipboard&) = delete;
+  PreparedClipboard& operator=(const PreparedClipboard&) = delete;
+};
 
+// WIC objects are created, used and released in the worker's COM apartment.
+class WorkerCom {
+ public:
+  WorkerCom() : status(::CoInitializeEx(nullptr, COINIT_MULTITHREADED)) {}
+  ~WorkerCom() {
+    if (SUCCEEDED(status)) ::CoUninitialize();
+  }
+  const HRESULT status;
+};
+
+std::unique_ptr<PreparedClipboard> PrepareClipboardImage(
+    const std::vector<uint8_t>& png, const std::optional<std::string>& token) {
+  auto prepared = std::make_unique<PreparedClipboard>();
+  WorkerCom com;
+  if (FAILED(com.status)) {
+    prepared->error =
+        HResultMessage("Initializing the clipboard worker", com.status);
+    return prepared;
+  }
+  ComPtr<IWICImagingFactory> factory;
+  ComPtr<IWICBitmapFrameDecode> frame;
+  if (!CreateFactory(&factory, &prepared->error) ||
+      !DecodePngFrame(factory.Get(), png, &frame, &prepared->error))
+    return prepared;
+  prepared->dib = CreateDibV5(factory.Get(), frame.Get(), &prepared->error);
+  if (prepared->dib == nullptr) return prepared;
+  prepared->png = AllocateGlobal(png.data(), png.size());
+  if (token.has_value()) {
+    const std::string terminated = *token + '\0';
+    prepared->token = AllocateGlobal(terminated.data(), terminated.size());
+  }
+  if (prepared->png == nullptr ||
+      (token.has_value() && prepared->token == nullptr))
+    prepared->error = "Could not allocate Windows clipboard data";
+  return prepared;
+}
+
+// Only this short publication step touches the clipboard on the platform
+// thread.
+bool PublishClipboardImage(HWND window, PreparedClipboard* prepared) {
   ScopedClipboard clipboard(window);
   if (!clipboard.opened()) {
-    ::GlobalFree(dib);
-    ::GlobalFree(png_memory);
-    if (token_memory != nullptr) ::GlobalFree(token_memory);
-    *error = "The Windows clipboard is busy";
+    prepared->error = "The Windows clipboard is busy";
     return false;
   }
   const UINT png_format = ::RegisterClipboardFormatW(kPngFormatName);
-  const UINT token_format = token.has_value()
-                                ? ::RegisterClipboardFormatW(kTokenFormatName)
-                                : 0;
-  if (png_format == 0 || (token.has_value() && token_format == 0) ||
+  const UINT token_format = prepared->token == nullptr
+                                ? 0
+                                : ::RegisterClipboardFormatW(kTokenFormatName);
+  if (png_format == 0 || (prepared->token != nullptr && token_format == 0) ||
       !::EmptyClipboard()) {
-    ::GlobalFree(dib);
-    ::GlobalFree(png_memory);
-    if (token_memory != nullptr) ::GlobalFree(token_memory);
-    *error = "Windows refused clipboard ownership";
+    prepared->error = "Windows refused clipboard ownership";
     return false;
   }
-
-  bool success = true;
-  if (::SetClipboardData(png_format, png_memory) != nullptr) {
-    png_memory = nullptr;
-  } else {
-    success = false;
-  }
-  if (success && ::SetClipboardData(CF_DIBV5, dib) != nullptr) {
-    dib = nullptr;
-  } else {
-    success = false;
-  }
-  if (success && token.has_value()) {
-    if (::SetClipboardData(token_format, token_memory) != nullptr) {
-      token_memory = nullptr;
-    } else {
-      success = false;
-    }
-  }
-  if (!success) {
+  const auto publish = [](UINT format, HGLOBAL* data) {
+    if (::SetClipboardData(format, *data) == nullptr) return false;
+    *data = nullptr;
+    return true;
+  };
+  if (!publish(png_format, &prepared->png) ||
+      !publish(CF_DIBV5, &prepared->dib) ||
+      (prepared->token != nullptr &&
+       !publish(token_format, &prepared->token))) {
     ::EmptyClipboard();
-    if (dib != nullptr) ::GlobalFree(dib);
-    if (png_memory != nullptr) ::GlobalFree(png_memory);
-    if (token_memory != nullptr) ::GlobalFree(token_memory);
-    *error = "Windows could not publish every clipboard format";
+    prepared->error = "Windows could not publish every clipboard format";
+    return false;
   }
-  return success;
+  return true;
 }
 
 flutter::EncodableValue ImageResult(const ClipboardImage& image,
@@ -572,6 +566,121 @@ const flutter::EncodableValue* MapValue(const flutter::EncodableMap& map,
 }
 
 }  // namespace
+
+// A message-only window completes workers on the calling platform thread.
+// One active job preserves write order and bounds simultaneous decoded buffers.
+class ClipboardWriter {
+ public:
+  explicit ClipboardWriter(HWND owner) : owner_(owner) {
+    class_name_ = L"Imclipboard.WorkerCompletion." +
+                  std::to_wstring(reinterpret_cast<uintptr_t>(this));
+    WNDCLASSW type = {};
+    type.lpfnWndProc = WindowProc;
+    type.hInstance = ::GetModuleHandleW(nullptr);
+    type.lpszClassName = class_name_.c_str();
+    if (!::RegisterClassW(&type)) return;
+    window_ = ::CreateWindowExW(0, type.lpszClassName, L"", 0, 0, 0, 0, 0,
+                                HWND_MESSAGE, nullptr, type.hInstance, this);
+  }
+
+  ~ClipboardWriter() {
+    // Joining here keeps callbacks and native allocations inside plugin
+    // lifetime.
+    if (window_ != nullptr) {
+      ::KillTimer(window_, 1);
+      ::DestroyWindow(window_);
+    }
+    if (active_.valid()) active_.wait();
+    ::UnregisterClassW(class_name_.c_str(), ::GetModuleHandleW(nullptr));
+  }
+
+  void Write(
+      std::vector<uint8_t> png, std::optional<std::string> token,
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+    if (window_ == nullptr || ::SetTimer(window_, 1, 10, nullptr) == 0) {
+      result->Error("write_failed", "Could not schedule clipboard completion");
+      return;
+    }
+    jobs_.push_back({std::move(png), std::move(token), std::move(result)});
+    StartNext();
+  }
+
+ private:
+  struct Job {
+    std::vector<uint8_t> png;
+    std::optional<std::string> token;
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
+  };
+
+  static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam,
+                                     LPARAM lparam) {
+    if (message == WM_NCCREATE) {
+      auto* creation = reinterpret_cast<CREATESTRUCTW*>(lparam);
+      ::SetWindowLongPtrW(window, GWLP_USERDATA,
+                          reinterpret_cast<LONG_PTR>(creation->lpCreateParams));
+    }
+    auto* writer = reinterpret_cast<ClipboardWriter*>(
+        ::GetWindowLongPtrW(window, GWLP_USERDATA));
+    if (message == WM_TIMER && wparam == 1 && writer != nullptr) {
+      writer->Complete();
+      return 0;
+    }
+    return ::DefWindowProcW(window, message, wparam, lparam);
+  }
+
+  void StartNext() {
+    if (completing_ || active_.valid()) return;
+    while (!jobs_.empty()) {
+      try {
+        active_ = std::async(std::launch::async,
+                             [png = std::move(jobs_.front().png),
+                              token = std::move(jobs_.front().token)] {
+                               return PrepareClipboardImage(png, token);
+                             });
+        return;
+      } catch (const std::exception& error) {
+        auto result = std::move(jobs_.front().result);
+        jobs_.pop_front();
+        result->Error("write_failed", error.what());
+      }
+    }
+    ::KillTimer(window_, 1);
+  }
+
+  void Complete() {
+    if (!active_.valid() ||
+        active_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+      return;
+    completing_ = true;
+    auto result = std::move(jobs_.front().result);
+    jobs_.pop_front();
+    std::string error;
+    try {
+      auto prepared = active_.get();
+      if (prepared->error.empty())
+        PublishClipboardImage(owner_ == nullptr ? window_ : owner_,
+                              prepared.get());
+      error = prepared->error;
+    } catch (const std::exception& exception) {
+      error = exception.what();
+    }
+    // The old job is removed before replying, allowing a reentrant write
+    // safely.
+    if (error.empty())
+      result->Success();
+    else
+      result->Error("write_failed", error);
+    completing_ = false;
+    StartNext();
+  }
+
+  std::wstring class_name_;
+  bool completing_ = false;
+  HWND owner_;
+  HWND window_ = nullptr;
+  std::deque<Job> jobs_;
+  std::future<std::unique_ptr<PreparedClipboard>> active_;
+};
 
 void ImclipboardPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows* registrar) {
@@ -634,10 +743,10 @@ void ImclipboardPlugin::HandleMethodCall(
     return;
   }
   if (method_call.method_name() == "writeImage") {
-    const auto* arguments = method_call.arguments() == nullptr
-                                ? nullptr
-                                : std::get_if<flutter::EncodableMap>(
-                                      method_call.arguments());
+    const auto* arguments =
+        method_call.arguments() == nullptr
+            ? nullptr
+            : std::get_if<flutter::EncodableMap>(method_call.arguments());
     const flutter::EncodableValue* bytes_value =
         arguments == nullptr ? nullptr : MapValue(*arguments, "bytes");
     const flutter::EncodableValue* token_value =
@@ -663,12 +772,8 @@ void ImclipboardPlugin::HandleMethodCall(
       token = *token_string;
     }
 
-    std::string error;
-    if (!WriteClipboardImage(window_, *bytes, token, &error)) {
-      result->Error("write_failed", error);
-      return;
-    }
-    result->Success();
+    if (!writer_) writer_ = std::make_unique<ClipboardWriter>(window_);
+    writer_->Write(*bytes, std::move(token), std::move(result));
     return;
   }
   result->NotImplemented();

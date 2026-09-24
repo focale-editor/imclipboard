@@ -109,10 +109,10 @@ packages:
     dependency: transitive
     description:
       name: imcodec
-      sha256: b18440ce5e850b0fe874ad7e7e7c7f6d8f003288a20e02c9444ef72f464b8c1a
+      sha256: "31f8976690f5f8727522ca5dbf8a542e8582d91572c63708c13862d25f5da4b8"
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.3"
+    version: "0.5.0"
   integration_test:
     dependency: "direct dev"
     description: flutter
@@ -271,10 +271,10 @@ packages:
     dependency: transitive
     description:
       name: vector_math
-      sha256: f36f9f3be64c6198714492bb455c11056e33e2f85d9a0b676a48301e44fdcf47
+      sha256: "92b9910f66ed1057fd4da7b040ae7c74cafacf885bdc81be496928d5049b032d"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.2"
+    version: "2.4.3"
   vm_service:
     dependency: transitive
     description:
@@ -303,10 +303,10 @@ packages:
     dependency: transitive
     description:
       name: zcodec
-      sha256: db516a895244b5ef9adfce79dd725b772d6c0f040d828e741cb8474cc31281d2
+      sha256: b9915496e119916117e0c008649cb2d5018fd37c153eeb6eae516aaa104cd163
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.2"
+    version: "0.2.3"
 sdks:
   dart: ">=3.13.1 <4.0.0"
   flutter: ">=3.47.0"

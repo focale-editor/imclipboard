@@ -1,5 +1,10 @@
 # 📰 Imclipboard changelog
 
+## v0.3.1
+Released on September 24, 2026.
+
+* **FEAT**: Added `writeGeneratedPng` for encoder-owned PNGs. ([#8408c2a](https://github.com/focale-editor/imclipboard/commit/8408c2a))
+
 ## v0.3.0
 Released on September 24, 2026.
 

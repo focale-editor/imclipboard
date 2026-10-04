@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:imclipboard/imclipboard.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:imclipboard_example/main.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -8,6 +9,8 @@ void main() {
   testWidgets('loads the host clipboard implementation', (
     WidgetTester tester,
   ) async {
+    await tester.pumpWidget(const ClipboardExampleApp());
+    await tester.pumpAndSettle();
     const ImClipboard clipboard = ImClipboard();
 
     expect(await clipboard.isSupported(), isTrue);

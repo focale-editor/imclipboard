@@ -103,7 +103,11 @@ public class ImclipboardPlugin: NSObject, FlutterPlugin {
   #if os(iOS)
     private func clipboardImage(includePng: Bool) throws -> ClipboardImage? {
       let pasteboard = UIPasteboard.general
-      let token = validToken(pasteboard.value(forPasteboardType: tokenTypeName) as? String)
+      let tokenValue = pasteboard.value(forPasteboardType: tokenTypeName)
+      let tokenString = (tokenValue as? String) ?? (tokenValue as? Data).flatMap {
+        String(data: $0, encoding: .utf8)
+      }
+      let token = validToken(tokenString)
 
       if let png = pasteboard.data(forPasteboardType: UTType.png.identifier) {
         guard !png.isEmpty,

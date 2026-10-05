@@ -1,5 +1,12 @@
 # 📰 Imclipboard changelog
 
+## v0.3.2
+Released on October 5, 2026.
+
+* **DOCS**: Updated package overview screenshot. ([#176f5e7](https://github.com/focale-editor/imclipboard/commit/176f5e7))
+* **FIX**: Fixed iOS clipboard token parsing for PNG data. ([#e171643](https://github.com/focale-editor/imclipboard/commit/e171643))
+* **CHORE**: Initialize example app in integration test. ([#db505a8](https://github.com/focale-editor/imclipboard/commit/db505a8))
+
 ## v0.3.1
 Released on September 24, 2026.
 

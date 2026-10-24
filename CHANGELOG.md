@@ -1,5 +1,10 @@
 # 📰 Imclipboard changelog
 
+## v0.3.3
+Released on October 24, 2026.
+
+* **FIX**: For foreign clipboard images, Linux now prefers PNG, then tries the other advertised formats supported by GdkPixbuf, and finally local file URIs. ([#65fa509](https://github.com/focale-editor/imclipboard/commit/65fa509))
+
 ## v0.3.2
 Released on October 5, 2026.
 

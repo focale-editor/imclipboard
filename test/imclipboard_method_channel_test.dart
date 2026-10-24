@@ -51,6 +51,36 @@ void main() {
     expect(read.value, isNull);
   });
 
+  test('preserves native read failure diagnostics in the exception cause', () async {
+    final Map<String, Object> details = {
+      'target': 'image/png',
+      'encodedBytes': 7,
+      'errorDomain': 'gdk-pixbuf-error-quark',
+      'errorCode': 3,
+      'attemptedTargets': ['image/png', 'image/jpeg'],
+    };
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'isSupported') {
+        return true;
+      }
+      throw PlatformException(code: 'read_failed', message: 'Unrecognized image file format', details: details);
+    });
+    final MethodChannelImClipboard clipboard = MethodChannelImClipboard(methodChannel: channel);
+
+    await expectLater(
+      clipboard.readImage(),
+      throwsA(
+        isA<ImClipboardException>()
+            .having((error) => error.operation, 'operation', 'readImage')
+            .having(
+              (error) => error.cause,
+              'cause',
+              isA<PlatformException>().having((error) => error.code, 'code', 'read_failed').having((error) => error.details, 'details', details),
+            ),
+      ),
+    );
+  });
+
   test('reads PNG bytes and writes them with an optional token', () async {
     MethodCall? writeCall;
     final Uint8List png = Uint8List.fromList(<int>[137, 80, 78, 71]);

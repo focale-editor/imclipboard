@@ -22,10 +22,26 @@ struct Image {
   Bytes png;
 };
 
+/// Describes a failed image transfer without retaining clipboard contents.
+struct ImageReadDiagnostics {
+  /// MIME target associated with the first failed image representation.
+  std::string target;
+  /// Encoded size of that representation, in bytes.
+  gsize encoded_bytes = 0;
+  /// GLib error domain, when a native decoder reported the failure.
+  std::string error_domain;
+  /// Native error code within error_domain.
+  int error_code = 0;
+  /// Image representations requested before exhausting the available fallbacks.
+  std::vector<std::string> attempted_targets;
+};
+
 // Separates an empty clipboard from a failed or invalid transfer.
 struct ImageReply {
   std::shared_ptr<Image> image;
   std::string error;
+  /// Context for the first failed representation, populated on read failures.
+  ImageReadDiagnostics diagnostics = {};
 };
 
 // GTK ownership stays on the main context; codecs and file I/O use workers.
@@ -53,9 +69,14 @@ class ClipboardService : public std::enable_shared_from_this<ClipboardService> {
   void Enqueue(std::function<void()> operation);
   // Starts the next queued call once the current callback has completed.
   void Next();
-  // Prefers native PNG before trying another image representation.
+  /// Collects distinct supported targets, preferring native PNG.
   void ReadTargets(const std::shared_ptr<ReadRequest>& request);
-  // Falls back to local files when no image target is available.
+  /// Tries each representation once while the clipboard owner is unchanged.
+  void ReadNextTarget(const std::shared_ptr<ReadRequest>& request);
+  /// Retains the first failure or completes a successful image transfer.
+  void FinishTarget(const std::shared_ptr<ReadRequest>& request,
+                    ImageReply reply, gsize encoded_bytes);
+  /// Falls back to local files after all image representations fail.
   void ReadUris(const std::shared_ptr<ReadRequest>& request);
   // Obtains metadata only while the image owner remains unchanged.
   void ReadToken(const std::shared_ptr<ReadRequest>& request);

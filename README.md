@@ -69,6 +69,11 @@ owner change during a read produces an error instead of mixing images and tokens
 Persistence is still requested through GTK's clipboard manager; availability
 following application exit depends on that manager.
 
+For foreign clipboard images, Linux prefers PNG, then tries the other advertised
+formats supported by GdkPixbuf, and finally local file URIs. An unavailable or
+undecodable representation does not prevent a usable alternative from being read.
+Image decoding still requires working GdkPixbuf loaders in the installed runtime.
+
 Android retains the original PNG on reads after validating it with BitmapFactory;
 other formats still convert to PNG. Windows prepares PNG and `CF_DIBV5` allocations
 on a worker, then publishes them together on the platform thread in write order.

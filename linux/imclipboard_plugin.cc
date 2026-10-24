@@ -54,8 +54,29 @@ void HandleMethodCall(ImclipboardPlugin* plugin, FlMethodCall* raw_call) {
     (*plugin->service)
         ->Read(include_png, [call, include_png](imclipboard::ImageReply reply) {
           if (!reply.error.empty()) {
+            const imclipboard::ImageReadDiagnostics& diagnostics =
+                reply.diagnostics;
+            g_autoptr(FlValue) details = fl_value_new_map();
+            if (!diagnostics.target.empty()) {
+              fl_value_set_string_take(
+                  details, "target",
+                  fl_value_new_string(diagnostics.target.c_str()));
+              fl_value_set_string_take(details, "encodedBytes",
+                                       fl_value_new_int(diagnostics.encoded_bytes));
+            }
+            if (!diagnostics.error_domain.empty()) {
+              fl_value_set_string_take(
+                  details, "errorDomain",
+                  fl_value_new_string(diagnostics.error_domain.c_str()));
+              fl_value_set_string_take(details, "errorCode",
+                                       fl_value_new_int(diagnostics.error_code));
+            }
+            FlValue* attempted = fl_value_new_list();
+            for (const std::string& target : diagnostics.attempted_targets)
+              fl_value_append_take(attempted, fl_value_new_string(target.c_str()));
+            fl_value_set_string_take(details, "attemptedTargets", attempted);
             fl_method_call_respond_error(call.get(), "read_failed",
-                                         reply.error.c_str(), nullptr, nullptr);
+                                         reply.error.c_str(), details, nullptr);
             return;
           }
           if (!reply.image) {

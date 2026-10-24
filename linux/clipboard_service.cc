@@ -110,6 +110,16 @@ struct DecodeSize {
   bool metadata_only;
 };
 
+/// Preserves a decoder's native error identity alongside its readable message.
+void SetDecodeError(ImageReply* reply, const GError* error,
+                    const char* fallback) {
+  reply->error = error == nullptr ? fallback : error->message;
+  if (error != nullptr) {
+    reply->diagnostics.error_domain = g_quark_to_string(error->domain);
+    reply->diagnostics.error_code = error->code;
+  }
+}
+
 ImageReply Decode(Bytes bytes, bool include_png, bool require_png) {
   ImageReply reply;
   auto image = std::make_shared<Image>();
@@ -153,10 +163,8 @@ ImageReply Decode(Bytes bytes, bool include_png, bool require_png) {
   const bool closed = gdk_pixbuf_loader_close(loader, valid ? &error : nullptr);
   if (!ValidSize(size.width, size.height) ||
       (include_png && (!valid || !closed))) {
-    reply.error =
-        error == nullptr
-            ? "Invalid image or decoded image exceeds 100 million pixels"
-            : error->message;
+    SetDecodeError(&reply, error,
+                   "Invalid image or decoded image exceeds 100 million pixels");
     return reply;
   }
   image->width = size.width;
@@ -171,8 +179,7 @@ ImageReply Decode(Bytes bytes, bool include_png, bool require_png) {
       if (pixbuf == nullptr ||
           !gdk_pixbuf_save_to_buffer(pixbuf, &output, &output_length, "png",
                                      &error, "compression", "1", nullptr)) {
-        reply.error = error == nullptr ? "Could not encode clipboard image"
-                                       : error->message;
+        SetDecodeError(&reply, error, "Could not encode clipboard image");
         return reply;
       }
       if (output_length > kMaximumBytes) {
@@ -275,6 +282,12 @@ struct ClipboardService::ReadRequest {
   bool include_png;
   std::function<void(ImageReply)> complete;
   ImageReply reply;
+  /// Supported representations in preference order, with no duplicates.
+  std::vector<GdkAtom> targets = {};
+  /// Names of representations already requested, for failure diagnostics.
+  std::vector<std::string> attempted_targets = {};
+  /// Index of the next representation to request.
+  size_t next_target = 0;
 };
 
 ClipboardService::ClipboardService(GtkClipboard* clipboard)
@@ -372,7 +385,7 @@ void ClipboardService::ReadTargets(
   auto* held = new std::shared_ptr<ReadRequest>(request);
   gtk_clipboard_request_targets(
       clipboard_,
-      [](GtkClipboard* clipboard, GdkAtom* targets, gint count, gpointer data) {
+      [](GtkClipboard*, GdkAtom* targets, gint count, gpointer data) {
         std::unique_ptr<std::shared_ptr<ReadRequest>> held(
             static_cast<std::shared_ptr<ReadRequest>*>(data));
         auto request = *held;
@@ -380,68 +393,107 @@ void ClipboardService::ReadTargets(
           request->service->CompleteRead(request);
           return;
         }
-        GdkAtom selected = GDK_NONE;
-        const GdkAtom png = gdk_atom_intern_static_string("image/png");
-        for (int i = 0; i < count; ++i)
-          if (targets[i] == png) selected = png;
-        if (selected == GDK_NONE) {
-          GSList* formats = gdk_pixbuf_get_formats();
-          for (GSList* item = formats; item != nullptr && selected == GDK_NONE;
-               item = item->next) {
-            g_auto(GStrv) types = gdk_pixbuf_format_get_mime_types(
-                static_cast<GdkPixbufFormat*>(item->data));
-            for (int t = 0; types[t] != nullptr && selected == GDK_NONE; ++t) {
-              const GdkAtom atom = gdk_atom_intern(types[t], FALSE);
-              for (int i = 0; i < count; ++i)
-                if (targets[i] == atom) selected = atom;
+        const auto add_target = [&](const char* type) {
+          const GdkAtom atom = gdk_atom_intern(type, FALSE);
+          if (std::find(request->targets.begin(), request->targets.end(), atom) !=
+              request->targets.end())
+            return;
+          for (int i = 0; i < count; ++i) {
+            if (targets[i] == atom) {
+              request->targets.push_back(atom);
+              return;
             }
           }
-          g_slist_free(formats);
+        };
+        add_target("image/png");
+        GSList* formats = gdk_pixbuf_get_formats();
+        for (GSList* item = formats; item != nullptr; item = item->next) {
+          auto* format = static_cast<GdkPixbufFormat*>(item->data);
+          if (gdk_pixbuf_format_is_disabled(format)) continue;
+          g_auto(GStrv) types = gdk_pixbuf_format_get_mime_types(format);
+          for (int index = 0; types[index] != nullptr; ++index)
+            add_target(types[index]);
         }
-        if (selected == GDK_NONE) {
-          request->service->ReadUris(request);
-          return;
-        }
-        auto* transfer = new std::shared_ptr<ReadRequest>(request);
-        gtk_clipboard_request_contents(
-            clipboard, selected,
-            [](GtkClipboard*, GtkSelectionData* selection, gpointer data) {
-              std::unique_ptr<std::shared_ptr<ReadRequest>> held(
-                  static_cast<std::shared_ptr<ReadRequest>*>(data));
-              auto request = *held;
-              if (request->revision != request->service->revision_) {
-                request->service->CompleteRead(request);
-                return;
-              }
-              const gint length = gtk_selection_data_get_length(selection);
-              const guchar* bytes = gtk_selection_data_get_data(selection);
-              if (length <= 0 || bytes == nullptr) {
-                request->service->ReadUris(request);
-                return;
-              }
-              if (static_cast<gsize>(length) > kMaximumBytes) {
-                request->reply.error = "Clipboard image exceeds 512 MiB";
-                request->service->CompleteRead(request);
-                return;
-              }
-              if (!request->include_png) {
-                auto image = std::make_shared<Image>();
-                if (PngInfo(bytes, length, image.get())) {
-                  request->reply.image = image;
-                  request->service->ReadToken(request);
-                  return;
-                }
-              }
-              Bytes input(g_bytes_new(bytes, length), g_bytes_unref);
-              Background(
-                  [request, input] {
-                    request->reply = Decode(input, request->include_png, false);
-                  },
-                  [request] { request->service->ReadToken(request); });
-            },
-            transfer);
+        g_slist_free(formats);
+        request->service->ReadNextTarget(request);
       },
       held);
+}
+
+void ClipboardService::ReadNextTarget(
+    const std::shared_ptr<ReadRequest>& request) {
+  if (request->revision != revision_) {
+    CompleteRead(request);
+    return;
+  }
+  if (request->next_target == request->targets.size()) {
+    ReadUris(request);
+    return;
+  }
+  const GdkAtom target = request->targets[request->next_target++];
+  g_autofree gchar* name = gdk_atom_name(target);
+  request->attempted_targets.emplace_back(name);
+  auto* held = new std::shared_ptr<ReadRequest>(request);
+  gtk_clipboard_request_contents(
+      clipboard_, target,
+      [](GtkClipboard*, GtkSelectionData* selection, gpointer data) {
+        std::unique_ptr<std::shared_ptr<ReadRequest>> held(
+            static_cast<std::shared_ptr<ReadRequest>*>(data));
+        auto request = *held;
+        if (request->revision != request->service->revision_) {
+          request->service->CompleteRead(request);
+          return;
+        }
+        const gint length = gtk_selection_data_get_length(selection);
+        const guchar* bytes = gtk_selection_data_get_data(selection);
+        if (length <= 0 || bytes == nullptr) {
+          request->service->ReadNextTarget(request);
+          return;
+        }
+        if (static_cast<gsize>(length) > kMaximumBytes) {
+          request->service->FinishTarget(
+              request, {nullptr, "Clipboard image exceeds 512 MiB"}, length);
+          return;
+        }
+        if (!request->include_png) {
+          auto image = std::make_shared<Image>();
+          if (PngInfo(bytes, length, image.get())) {
+            request->service->FinishTarget(request, {image, {}}, length);
+            return;
+          }
+        }
+        Bytes input(g_bytes_new(bytes, length), g_bytes_unref);
+        auto reply = std::make_shared<ImageReply>();
+        Background(
+            [request, input = std::move(input), reply]() mutable {
+              // Release rejected bytes before requesting another representation.
+              *reply = Decode(std::move(input), request->include_png, false);
+            },
+            [request, reply, length] {
+              request->service->FinishTarget(request, std::move(*reply), length);
+            });
+      },
+      held);
+}
+
+void ClipboardService::FinishTarget(
+    const std::shared_ptr<ReadRequest>& request, ImageReply reply,
+    gsize encoded_bytes) {
+  if (request->revision != revision_) {
+    CompleteRead(request);
+    return;
+  }
+  if (reply.image) {
+    request->reply = std::move(reply);
+    ReadToken(request);
+    return;
+  }
+  if (request->reply.error.empty() && !reply.error.empty()) {
+    reply.diagnostics.target = request->attempted_targets.back();
+    reply.diagnostics.encoded_bytes = encoded_bytes;
+    request->reply = std::move(reply);
+  }
+  ReadNextTarget(request);
 }
 
 void ClipboardService::ReadUris(const std::shared_ptr<ReadRequest>& request) {
@@ -460,7 +512,7 @@ void ClipboardService::ReadUris(const std::shared_ptr<ReadRequest>& request) {
               if (gdk_pixbuf_get_file_info(path.c_str(), &image->width,
                                            &image->height) != nullptr &&
                   ValidSize(image->width, image->height)) {
-                request->reply.image = image;
+                request->reply = {image, {}};
                 return;
               }
             } else {
@@ -507,6 +559,8 @@ void ClipboardService::CompleteRead(
     const std::shared_ptr<ReadRequest>& request) {
   if (request->revision != revision_)
     request->reply = {nullptr, "Clipboard changed while reading"};
+  if (!request->reply.error.empty())
+    request->reply.diagnostics.attempted_targets = request->attempted_targets;
   request->complete(request->reply);
   Next();
 }
